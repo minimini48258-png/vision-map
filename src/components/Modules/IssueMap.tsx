@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { Issue, IssueCategory } from '../../types'
 
 const CATEGORY_CONFIG: Record<IssueCategory, { label: string; color: string }> = {
@@ -75,12 +76,12 @@ function IssueCard({ issue, onDelete }: { issue: Issue; onDelete: () => void }) 
 }
 
 export default function IssueMap() {
-  const { issues, addIssue, deleteIssue, addMapNode } = useAppStore((s) => ({
+  const { issues, addIssue, deleteIssue, addMapNode } = useAppStore(useShallow((s) => ({
     issues: s.issues,
     addIssue: s.addIssue,
     deleteIssue: s.deleteIssue,
     addMapNode: s.addMapNode,
-  }))
+  })))
   const [input, setInput] = useState('')
   const [category, setCategory] = useState<IssueCategory>('population')
 

@@ -1,12 +1,13 @@
 import { Network, GitBranch } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { ViewMode } from '../../types'
 
 export default function TopBar() {
-  const { viewMode, setViewMode } = useAppStore((s) => ({
+  const { viewMode, setViewMode } = useAppStore(useShallow((s) => ({
     viewMode: s.viewMode,
     setViewMode: s.setViewMode,
-  }))
+  })))
 
   return (
     <div className="h-11 flex items-center justify-between px-4 bg-[#0d1117] border-b border-slate-700/50">

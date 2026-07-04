@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, X, Sparkles, RotateCcw } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useGroqAI } from '../../hooks/useGroqAI'
 
 const QUICK_PROMPTS = [
@@ -11,7 +12,7 @@ const QUICK_PROMPTS = [
 ]
 
 export default function AIFacilitator() {
-  const { aiMessages, addAIMessage, clearAIMessages, setAIPanelOpen, selfItems, issues, plans } = useAppStore((s) => ({
+  const { aiMessages, addAIMessage, clearAIMessages, setAIPanelOpen, selfItems, issues, plans } = useAppStore(useShallow((s) => ({
     aiMessages: s.aiMessages,
     addAIMessage: s.addAIMessage,
     clearAIMessages: s.clearAIMessages,
@@ -19,7 +20,7 @@ export default function AIFacilitator() {
     selfItems: s.selfItems,
     issues: s.issues,
     plans: s.plans,
-  }))
+  })))
   const { ask, loading } = useGroqAI()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)

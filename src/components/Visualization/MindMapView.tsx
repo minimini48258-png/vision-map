@@ -15,6 +15,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { nanoid } from 'nanoid'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { MapNode, MapEdge, NodeType } from '../../types'
 
 const NODE_COLORS: Record<NodeType, { bg: string; border: string; text: string }> = {
@@ -66,12 +67,12 @@ function toFlowEdge(e: MapEdge): Edge {
 }
 
 export default function MindMapView() {
-  const { mapNodes, mapEdges, setMapNodes, setMapEdges } = useAppStore((s) => ({
+  const { mapNodes, mapEdges, setMapNodes, setMapEdges } = useAppStore(useShallow((s) => ({
     mapNodes: s.mapNodes,
     mapEdges: s.mapEdges,
     setMapNodes: s.setMapNodes,
     setMapEdges: s.setMapEdges,
-  }))
+  })))
 
   const flowNodes = mapNodes.map(toFlowNode)
   const flowEdges = mapEdges.map(toFlowEdge)

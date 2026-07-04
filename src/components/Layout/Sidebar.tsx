@@ -1,5 +1,6 @@
 import { Heart, MapPin, Link2, CalendarCheck, Sparkles, KeyRound } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { ActiveModule } from '../../types'
 
 const NAV_ITEMS: { id: ActiveModule; label: string; icon: React.ReactNode; color: string }[] = [
@@ -10,13 +11,13 @@ const NAV_ITEMS: { id: ActiveModule; label: string; icon: React.ReactNode; color
 ]
 
 export default function Sidebar() {
-  const { activeModule, setActiveModule, aiPanelOpen, setAIPanelOpen, setGroqApiKey } = useAppStore((s) => ({
+  const { activeModule, setActiveModule, aiPanelOpen, setAIPanelOpen, setGroqApiKey } = useAppStore(useShallow((s) => ({
     activeModule: s.activeModule,
     setActiveModule: s.setActiveModule,
     aiPanelOpen: s.aiPanelOpen,
     setAIPanelOpen: s.setAIPanelOpen,
     setGroqApiKey: s.setGroqApiKey,
-  }))
+  })))
 
   return (
     <div className="w-14 flex flex-col items-center gap-1 py-4 bg-[#0d1117] border-r border-slate-700/50">

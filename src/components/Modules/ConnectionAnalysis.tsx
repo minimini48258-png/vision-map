@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Trash2, Sparkles, Link } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useGroqAI } from '../../hooks/useGroqAI'
 import type { Connection } from '../../types'
 
@@ -9,7 +10,7 @@ const ALIGNMENT_LABELS = ['', '低', '中', '高'] as const
 const ALIGNMENT_COLORS = ['', 'text-slate-400', 'text-yellow-400', 'text-emerald-400'] as const
 
 export default function ConnectionAnalysis() {
-  const { selfItems, issues, connections, addConnection, deleteConnection, mapEdges, setMapEdges } = useAppStore((s) => ({
+  const { selfItems, issues, connections, addConnection, deleteConnection, mapEdges, setMapEdges } = useAppStore(useShallow((s) => ({
     selfItems: s.selfItems,
     issues: s.issues,
     connections: s.connections,
@@ -17,7 +18,7 @@ export default function ConnectionAnalysis() {
     deleteConnection: s.deleteConnection,
     mapEdges: s.mapEdges,
     setMapEdges: s.setMapEdges,
-  }))
+  })))
 
   const { analyzeAlignment, loading } = useGroqAI()
   const [selfId, setSelfId] = useState('')

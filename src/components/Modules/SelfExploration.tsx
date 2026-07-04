@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useGroqAI } from '../../hooks/useGroqAI'
 import type { SelfItem, SelfItemType } from '../../types'
 
@@ -69,12 +70,12 @@ function ItemCard({ item, onDelete }: { item: SelfItem; onDelete: () => void }) 
 }
 
 export default function SelfExploration() {
-  const { selfItems, addSelfItem, deleteSelfItem, addMapNode } = useAppStore((s) => ({
+  const { selfItems, addSelfItem, deleteSelfItem, addMapNode } = useAppStore(useShallow((s) => ({
     selfItems: s.selfItems,
     addSelfItem: s.addSelfItem,
     deleteSelfItem: s.deleteSelfItem,
     addMapNode: s.addMapNode,
-  }))
+  })))
   const [input, setInput] = useState('')
   const [type, setType] = useState<SelfItemType>('love')
 

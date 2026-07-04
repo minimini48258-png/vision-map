@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 
 const STAGE_CONFIG = [
   { key: 'context',   label: '現状・背景',    color: '#ef4444', bg: '#1c0a0a' },
@@ -10,12 +11,12 @@ const STAGE_CONFIG = [
 ] as const
 
 export default function ToCView() {
-  const { issues, selfItems, connections, plans } = useAppStore((s) => ({
+  const { issues, selfItems, connections, plans } = useAppStore(useShallow((s) => ({
     issues: s.issues,
     selfItems: s.selfItems,
     connections: s.connections,
     plans: s.plans,
-  }))
+  })))
 
   const highConnections = connections.filter((c) => c.alignment >= 2)
 

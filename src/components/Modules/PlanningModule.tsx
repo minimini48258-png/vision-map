@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { Plus, Trash2, Sparkles, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useAppStore } from '../../store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import { useGroqAI } from '../../hooks/useGroqAI'
 import type { Plan, Milestone } from '../../types'
 
 function PlanCard({ plan, onDelete }: { plan: Plan; onDelete: () => void }) {
-  const { issues, selfItems, updatePlan } = useAppStore((s) => ({
+  const { issues, selfItems, updatePlan } = useAppStore(useShallow((s) => ({
     issues: s.issues,
     selfItems: s.selfItems,
     updatePlan: s.updatePlan,
-  }))
+  })))
   const { suggestPlanSteps, loading } = useGroqAI()
   const [expanded, setExpanded] = useState(true)
   const [newMs, setNewMs] = useState('')
@@ -124,14 +125,14 @@ function PlanCard({ plan, onDelete }: { plan: Plan; onDelete: () => void }) {
 }
 
 export default function PlanningModule() {
-  const { plans, issues, selfItems, addPlan, deletePlan, addMapNode } = useAppStore((s) => ({
+  const { plans, issues, selfItems, addPlan, deletePlan, addMapNode } = useAppStore(useShallow((s) => ({
     plans: s.plans,
     issues: s.issues,
     selfItems: s.selfItems,
     addPlan: s.addPlan,
     deletePlan: s.deletePlan,
     addMapNode: s.addMapNode,
-  }))
+  })))
   const [title, setTitle] = useState('')
   const [issueId, setIssueId] = useState('')
   const [selfIds, setSelfIds] = useState<string[]>([])

@@ -1,4 +1,5 @@
 import { useAppStore } from './store/useAppStore'
+import { useShallow } from 'zustand/react/shallow'
 import ApiKeySetup from './components/Setup/ApiKeySetup'
 import Sidebar from './components/Layout/Sidebar'
 import TopBar from './components/Layout/TopBar'
@@ -18,12 +19,12 @@ const MODULE_PANELS = {
 } as const
 
 export default function App() {
-  const { groqApiKey, activeModule, viewMode, aiPanelOpen } = useAppStore((s) => ({
+  const { groqApiKey, activeModule, viewMode, aiPanelOpen } = useAppStore(useShallow((s) => ({
     groqApiKey: s.groqApiKey,
     activeModule: s.activeModule,
     viewMode: s.viewMode,
     aiPanelOpen: s.aiPanelOpen,
-  }))
+  })))
 
   if (!groqApiKey) return <ApiKeySetup />
 
