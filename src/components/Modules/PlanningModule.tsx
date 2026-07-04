@@ -104,7 +104,7 @@ function PlanCard({ plan, onDelete }: { plan: Plan; onDelete: () => void }) {
           </div>
           <div className="flex gap-2">
             <input value={newMs} onChange={(e) => setNewMs(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addMilestone()}
+              onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && addMilestone()}
               placeholder="マイルストーンを追加..."
               className="flex-1 bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 placeholder-gray-400"
             />
@@ -157,7 +157,7 @@ export default function PlanningModule() {
         <h2 className="text-sm font-semibold text-gray-800 mb-3">計画立案</h2>
         <div className="space-y-2">
           <input value={title} onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && handleAdd()}
             placeholder="取り組みのタイトル"
             className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition-colors"
           />
