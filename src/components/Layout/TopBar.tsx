@@ -10,23 +10,18 @@ export default function TopBar() {
   })))
 
   return (
-    <div className="h-11 flex items-center justify-between px-4 bg-[#0d1117] border-b border-slate-700/50">
-      <h1 className="text-xs font-semibold text-slate-400 tracking-widest uppercase">VisionMap</h1>
+    <div className="h-11 flex items-center justify-between px-4 bg-white border-b border-gray-200">
+      <h1 className="text-xs font-semibold text-gray-400 tracking-widest uppercase">VisionMap</h1>
 
-      <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-0.5">
+      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
         {([
           { id: 'mindmap' as ViewMode, label: 'マインドマップ', icon: <Network size={13} /> },
           { id: 'toc'     as ViewMode, label: 'ToC',           icon: <GitBranch size={13} /> },
         ] as const).map((v) => (
-          <button
-            key={v.id}
-            onClick={() => setViewMode(v.id)}
+          <button key={v.id} onClick={() => setViewMode(v.id)}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors ${
-              viewMode === v.id
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
+              viewMode === v.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
             {v.icon}
             {v.label}
           </button>

@@ -18,21 +18,21 @@ export default function ApiKeySetup() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 mb-4">
-            <KeyRound size={24} className="text-indigo-400" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-100 border border-indigo-200 mb-4">
+            <KeyRound size={24} className="text-indigo-600" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">VisionMap</h1>
-          <p className="text-slate-400 text-sm leading-relaxed">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">VisionMap</h1>
+          <p className="text-gray-500 text-sm leading-relaxed">
             自分のビジョンと地域課題をつなぐ思考整理ツール
           </p>
         </div>
 
-        <div className="bg-[#161b27] border border-slate-700/50 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-slate-300 mb-1">Groq APIキーを入力</h2>
-          <p className="text-xs text-slate-500 mb-4">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-sm font-medium text-gray-700 mb-1">Groq APIキーを入力</h2>
+          <p className="text-xs text-gray-400 mb-4">
             キーは端末のブラウザにのみ保存されます。外部には送信されません。
           </p>
 
@@ -41,11 +41,12 @@ export default function ApiKeySetup() {
               type="password"
               value={key}
               onChange={(e) => { setKey(e.target.value); setError('') }}
+              onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && handleSubmit(e as unknown as React.FormEvent)}
               placeholder="gsk_xxxxxxxxxxxxxxxx"
-              className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition-colors"
               autoFocus
             />
-            {error && <p className="text-xs text-red-400">{error}</p>}
+            {error && <p className="text-xs text-red-500">{error}</p>}
             <button
               type="submit"
               disabled={!key}
@@ -56,9 +57,9 @@ export default function ApiKeySetup() {
             </button>
           </form>
 
-          <p className="text-xs text-slate-600 mt-4 text-center">
+          <p className="text-xs text-gray-400 mt-4 text-center">
             APIキーは{' '}
-            <span className="text-slate-400">console.groq.com</span>
+            <span className="text-gray-600 font-medium">console.groq.com</span>
             {' '}で取得できます
           </p>
         </div>

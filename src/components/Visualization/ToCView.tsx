@@ -2,12 +2,12 @@ import { useAppStore } from '../../store/useAppStore'
 import { useShallow } from 'zustand/react/shallow'
 
 const STAGE_CONFIG = [
-  { key: 'context',   label: '現状・背景',    color: '#ef4444', bg: '#1c0a0a' },
-  { key: 'input',     label: '入力・強み',    color: '#f97316', bg: '#1c1208' },
-  { key: 'activity',  label: '活動・介入',    color: '#eab308', bg: '#1a1608' },
-  { key: 'output',    label: 'アウトプット',  color: '#22c55e', bg: '#081a0e' },
-  { key: 'outcome',   label: 'アウトカム',    color: '#06b6d4', bg: '#081518' },
-  { key: 'impact',    label: 'インパクト',    color: '#8b5cf6', bg: '#100d1c' },
+  { key: 'context',   label: '現状・背景',    color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
+  { key: 'input',     label: '入力・強み',    color: '#ea580c', bg: '#fff7ed', border: '#fdba74' },
+  { key: 'activity',  label: '活動・介入',    color: '#ca8a04', bg: '#fefce8', border: '#fde047' },
+  { key: 'output',    label: 'アウトプット',  color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
+  { key: 'outcome',   label: 'アウトカム',    color: '#0891b2', bg: '#ecfeff', border: '#67e8f9' },
+  { key: 'impact',    label: 'インパクト',    color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
 ] as const
 
 export default function ToCView() {
@@ -36,39 +36,30 @@ export default function ToCView() {
   }
 
   return (
-    <div className="w-full h-full overflow-auto p-6">
-      <h2 className="text-sm font-semibold text-slate-400 mb-6 text-center">Theory of Change</h2>
+    <div className="w-full h-full overflow-auto p-6 bg-gray-50">
+      <h2 className="text-sm font-semibold text-gray-500 mb-6 text-center tracking-wide">Theory of Change</h2>
 
       <div className="flex gap-3 min-w-max mx-auto">
-        {STAGE_CONFIG.map((stage, stageIdx) => {
+        {STAGE_CONFIG.map((stage) => {
           const items = stages[stage.key as keyof typeof stages]
           return (
-            <div key={stage.key} className="flex flex-col items-center gap-2 w-44">
-              {/* Header */}
-              <div className="w-full text-center px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ background: stage.bg, border: `1px solid ${stage.color}`, color: stage.color }}>
+            <div key={stage.key} className="flex flex-col gap-2 w-44">
+              <div className="w-full text-center px-3 py-1.5 rounded-lg text-xs font-semibold border"
+                style={{ background: stage.bg, borderColor: stage.border, color: stage.color }}>
                 {stage.label}
               </div>
 
-              {/* Arrow connector */}
-              {stageIdx < STAGE_CONFIG.length - 1 && (
-                <div className="hidden" />
-              )}
-
-              {/* Items */}
               <div className="flex flex-col gap-1.5 w-full">
                 {items.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-700 border border-dashed border-slate-800 rounded-xl">
+                  <div className="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-300 rounded-xl bg-white">
                     未入力
                   </div>
                 ) : (
                   items.map((item) => (
-                    <div key={item.id} className="rounded-xl p-2.5 text-left"
-                      style={{ background: stage.bg, border: `1px solid ${stage.color}22` }}>
-                      <p className="text-xs leading-snug" style={{ color: stage.color }}>{item.label}</p>
-                      {item.sub && (
-                        <p className="text-xs text-slate-600 mt-0.5">{item.sub}</p>
-                      )}
+                    <div key={item.id} className="rounded-xl p-2.5 text-left border shadow-sm"
+                      style={{ background: stage.bg, borderColor: stage.border }}>
+                      <p className="text-xs leading-snug font-medium" style={{ color: stage.color }}>{item.label}</p>
+                      {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
                     </div>
                   ))
                 )}
@@ -78,22 +69,17 @@ export default function ToCView() {
         })}
       </div>
 
-      {/* Arrows between stages */}
-      <div className="flex gap-3 min-w-max mx-auto mt-2 justify-center items-center">
+      <div className="flex gap-3 min-w-max mx-auto mt-1 items-center justify-center">
         {STAGE_CONFIG.map((stage, idx) => (
-          <div key={stage.key} className="flex items-center w-44">
-            {idx < STAGE_CONFIG.length - 1 && (
-              <div className="flex items-center w-full justify-end pr-1">
-                <span className="text-slate-700 text-lg">→</span>
-              </div>
-            )}
+          <div key={stage.key} className="w-44 flex justify-end pr-1">
+            {idx < STAGE_CONFIG.length - 1 && <span className="text-gray-400 text-base">→</span>}
           </div>
         ))}
       </div>
 
       {Object.values(stages).every((s) => s.length === 0) && (
         <div className="text-center mt-12">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-gray-400">
             各モジュールで要素を入力すると<br />変化の理論が自動で構築されます
           </p>
         </div>

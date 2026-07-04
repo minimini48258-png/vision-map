@@ -19,17 +19,14 @@ import { useShallow } from 'zustand/react/shallow'
 import type { MapNode, MapEdge, NodeType } from '../../types'
 
 const NODE_COLORS: Record<NodeType, { bg: string; border: string; text: string }> = {
-  self:  { bg: '#1e1b4b', border: '#6366f1', text: '#a5b4fc' },
-  issue: { bg: '#1c1917', border: '#f97316', text: '#fdba74' },
-  plan:  { bg: '#052e16', border: '#22c55e', text: '#86efac' },
-  note:  { bg: '#1e293b', border: '#475569', text: '#94a3b8' },
+  self:  { bg: '#eef2ff', border: '#6366f1', text: '#4338ca' },
+  issue: { bg: '#fff7ed', border: '#f97316', text: '#c2410c' },
+  plan:  { bg: '#f0fdf4', border: '#22c55e', text: '#15803d' },
+  note:  { bg: '#f8fafc', border: '#94a3b8', text: '#475569' },
 }
 
 const NODE_TYPE_LABELS: Record<NodeType, string> = {
-  self: '自分',
-  issue: '課題',
-  plan: '計画',
-  note: 'メモ',
+  self: '自分', issue: '課題', plan: '計画', note: 'メモ',
 }
 
 function toFlowNode(n: MapNode): Node {
@@ -40,7 +37,7 @@ function toFlowNode(n: MapNode): Node {
     data: { label: n.label, type: n.type },
     style: {
       background: colors.bg,
-      border: `1px solid ${colors.border}`,
+      border: `1.5px solid ${colors.border}`,
       color: colors.text,
       borderRadius: '12px',
       padding: '8px 14px',
@@ -49,20 +46,18 @@ function toFlowNode(n: MapNode): Node {
       minWidth: '120px',
       maxWidth: '200px',
       wordBreak: 'break-word',
-      boxShadow: `0 0 12px ${colors.border}22`,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
     },
   }
 }
 
 function toFlowEdge(e: MapEdge): Edge {
   return {
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    label: e.label,
-    style: { stroke: '#4f6080', strokeWidth: 1.5 },
-    labelStyle: { fill: '#94a3b8', fontSize: 10 },
-    labelBgStyle: { fill: '#1e293b' },
+    id: e.id, source: e.source, target: e.target, label: e.label,
+    style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+    labelStyle: { fill: '#64748b', fontSize: 10 },
+    labelBgStyle: { fill: '#ffffff' },
+    labelBgPadding: [4, 2],
   }
 }
 
@@ -79,84 +74,60 @@ export default function MindMapView() {
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     const updated = applyNodeChanges(changes, flowNodes)
-    const newMapNodes: MapNode[] = updated.map((n) => ({
+    setMapNodes(updated.map((n) => ({
       id: n.id,
       type: (n.data as { type: NodeType }).type,
       label: (n.data as { label: string }).label,
       position: n.position,
-    }))
-    setMapNodes(newMapNodes)
+    })))
   }, [flowNodes, setMapNodes])
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     const updated = applyEdgeChanges(changes, flowEdges)
-    const newMapEdges: MapEdge[] = updated.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
+    setMapEdges(updated.map((e) => ({
+      id: e.id, source: e.source, target: e.target,
       label: typeof (e as Edge).label === 'string' ? String((e as Edge).label) : undefined,
-    }))
-    setMapEdges(newMapEdges)
+    })))
   }, [flowEdges, setMapEdges])
 
   const onConnect = useCallback((params: Connection) => {
-    const newEdge: MapEdge = {
-      id: `edge-manual-${nanoid()}`,
-      source: params.source,
-      target: params.target,
-    }
-    setMapEdges([...mapEdges, newEdge])
+    setMapEdges([...mapEdges, { id: `edge-manual-${nanoid()}`, source: params.source, target: params.target }])
   }, [mapEdges, setMapEdges])
 
   const addNoteNode = () => {
-    const node: MapNode = {
-      id: `node-note-${nanoid()}`,
-      type: 'note',
-      label: 'メモ',
+    setMapNodes([...mapNodes, {
+      id: `node-note-${nanoid()}`, type: 'note', label: 'メモ',
       position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-    }
-    setMapNodes([...mapNodes, node])
+    }])
   }
 
   return (
-    <div className="relative w-full h-full">
-      {/* Legend */}
+    <div className="relative w-full h-full bg-gray-50">
       <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
         {(Object.entries(NODE_COLORS) as [NodeType, typeof NODE_COLORS[NodeType]][]).map(([type, colors]) => (
-          <div key={type} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full"
-            style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}>
+          <div key={type} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border shadow-sm"
+            style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}>
             {NODE_TYPE_LABELS[type]}
           </div>
         ))}
         <button onClick={addNoteNode}
-          className="text-xs px-2 py-1 rounded-full bg-slate-800 border border-slate-600 text-slate-400 hover:text-white transition-colors">
+          className="text-xs px-2 py-1 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 shadow-sm transition-colors">
           + メモ追加
         </button>
       </div>
 
-      <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        fitView
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="#1e293b" gap={24} />
-        <Controls style={{ background: '#1e293b', border: '1px solid #334155' }} />
-        <MiniMap
-          style={{ background: '#0f1117', border: '1px solid #334155' }}
-          nodeColor={(n) => {
-            const type = (n.data as { type: NodeType }).type
-            return NODE_COLORS[type]?.border ?? '#475569'
-          }}
-        />
+      <ReactFlow nodes={flowNodes} edges={flowEdges}
+        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
+        fitView proOptions={{ hideAttribution: true }}>
+        <Background color="#e2e8f0" gap={24} />
+        <Controls style={{ background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }} />
+        <MiniMap style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+          nodeColor={(n) => NODE_COLORS[(n.data as { type: NodeType }).type]?.border ?? '#94a3b8'} />
       </ReactFlow>
 
       {mapNodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-sm text-slate-600 text-center">
+          <p className="text-sm text-gray-400 text-center">
             左パネルで要素を追加すると<br />ここにノードが表示されます
           </p>
         </div>

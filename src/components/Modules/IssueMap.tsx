@@ -6,13 +6,13 @@ import { useShallow } from 'zustand/react/shallow'
 import type { Issue, IssueCategory } from '../../types'
 
 const CATEGORY_CONFIG: Record<IssueCategory, { label: string; color: string }> = {
-  population:     { label: '人口・移住',   color: 'text-red-400' },
-  economy:        { label: '産業・経済',   color: 'text-orange-400' },
-  environment:    { label: '環境・エネルギー', color: 'text-emerald-400' },
-  welfare:        { label: '福祉・医療',   color: 'text-blue-400' },
-  education:      { label: '教育・文化',   color: 'text-purple-400' },
-  infrastructure: { label: 'インフラ・交通', color: 'text-slate-400' },
-  other:          { label: 'その他',       color: 'text-gray-400' },
+  population:     { label: '人口・移住',      color: 'text-red-600' },
+  economy:        { label: '産業・経済',      color: 'text-orange-600' },
+  environment:    { label: '環境・エネルギー', color: 'text-emerald-600' },
+  welfare:        { label: '福祉・医療',      color: 'text-blue-600' },
+  education:      { label: '教育・文化',      color: 'text-purple-600' },
+  infrastructure: { label: 'インフラ・交通',  color: 'text-slate-600' },
+  other:          { label: 'その他',          color: 'text-gray-500' },
 }
 
 function IssueCard({ issue, onDelete }: { issue: Issue; onDelete: () => void }) {
@@ -21,19 +21,19 @@ function IssueCard({ issue, onDelete }: { issue: Issue; onDelete: () => void }) 
   const cfg = CATEGORY_CONFIG[issue.category]
 
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-3">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
       <div className="flex items-start gap-2">
         <div className="flex-1">
           <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
-          <p className="text-sm text-white mt-0.5">{issue.title}</p>
+          <p className="text-sm text-gray-800 mt-0.5">{issue.title}</p>
         </div>
         <div className="flex gap-1">
           <button onClick={() => setExpanded(!expanded)}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition-colors">
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           <button onClick={onDelete}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-red-400 transition-colors">
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
@@ -42,31 +42,31 @@ function IssueCard({ issue, onDelete }: { issue: Issue; onDelete: () => void }) 
       {expanded && (
         <div className="mt-3 space-y-2">
           <div>
-            <label className="text-xs text-slate-500 block mb-1">概要・背景</label>
+            <label className="text-xs text-gray-500 block mb-1">概要・背景</label>
             <textarea
               value={issue.description ?? ''}
               onChange={(e) => updateIssue(issue.id, { description: e.target.value })}
               placeholder="課題の背景を記述..."
               rows={2}
-              className="w-full bg-black/20 text-xs text-slate-300 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-slate-600"
+              className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 placeholder-gray-400"
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">根本原因</label>
+            <label className="text-xs text-gray-500 block mb-1">根本原因</label>
             <input
               value={issue.rootCause ?? ''}
               onChange={(e) => updateIssue(issue.id, { rootCause: e.target.value })}
               placeholder="なぜこの課題が起きているか..."
-              className="w-full bg-black/20 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-slate-600"
+              className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300 placeholder-gray-400"
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">放置した場合の影響</label>
+            <label className="text-xs text-gray-500 block mb-1">放置した場合の影響</label>
             <input
               value={issue.impact ?? ''}
               onChange={(e) => updateIssue(issue.id, { impact: e.target.value })}
               placeholder="この課題が解決されないと..."
-              className="w-full bg-black/20 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-slate-600"
+              className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300 placeholder-gray-400"
             />
           </div>
         </div>
@@ -105,14 +105,14 @@ export default function IssueMap() {
   }))
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-slate-700/50">
-        <h2 className="text-sm font-semibold text-white mb-3">課題マップ</h2>
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="text-sm font-semibold text-gray-800 mb-3">課題マップ</h2>
         <div className="flex gap-1 mb-2 flex-wrap">
           {(Object.entries(CATEGORY_CONFIG) as [IssueCategory, typeof CATEGORY_CONFIG[IssueCategory]][]).map(([c, cfg]) => (
             <button key={c} onClick={() => setCategory(c)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                category === c ? `${cfg.color} border-current bg-white/5` : 'text-slate-500 border-slate-700 hover:text-slate-300'
+                category === c ? `${cfg.color} border-current bg-gray-50` : 'text-gray-400 border-gray-200 hover:text-gray-600'
               }`}>
               {cfg.label}
             </button>
@@ -124,7 +124,7 @@ export default function IssueMap() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             placeholder="課題を入力（例：若者の流出が止まらない）"
-            className="flex-1 bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+            className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition-colors"
           />
           <button onClick={handleAdd} disabled={!input.trim()}
             className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg transition-colors">
@@ -145,7 +145,7 @@ export default function IssueMap() {
           </div>
         ))}
         {issues.length === 0 && (
-          <p className="text-xs text-slate-600 text-center pt-8">
+          <p className="text-xs text-gray-400 text-center pt-8">
             取り組みたい地域・社会課題を入力してみましょう
           </p>
         )}
