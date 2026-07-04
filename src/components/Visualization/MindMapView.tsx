@@ -344,12 +344,10 @@ function StylePanel({
         )}
 
         {/* Delete */}
-        {!selectedNode.refId && (
-          <button onClick={() => onDeleteNode(selectedNode.id)}
-            className="w-full text-xs py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors mt-1">
-            削除
-          </button>
-        )}
+        <button onClick={() => onDeleteNode(selectedNode.id)}
+          className="w-full text-xs py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors mt-1">
+          削除
+        </button>
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useAppStore } from './store/useAppStore'
 import { useShallow } from 'zustand/react/shallow'
 import ApiKeySetup from './components/Setup/ApiKeySetup'
@@ -25,6 +26,27 @@ export default function App() {
     viewMode: s.viewMode,
     aiPanelOpen: s.aiPanelOpen,
   })))
+
+  // Clean up orphaned map nodes on startup
+  const { selfItems, issues, plans, mapNodes, setMapNodes } = useAppStore(useShallow((s) => ({
+    selfItems: s.selfItems,
+    issues: s.issues,
+    plans: s.plans,
+    mapNodes: s.mapNodes,
+    setMapNodes: s.setMapNodes,
+  })))
+
+  useEffect(() => {
+    const linkedIds = new Set([
+      ...selfItems.map((i) => i.id),
+      ...issues.map((i) => i.id),
+      ...plans.map((i) => i.id),
+    ])
+    const cleaned = mapNodes.filter((n) => !n.refId || linkedIds.has(n.refId))
+    if (cleaned.length !== mapNodes.length) {
+      setMapNodes(cleaned)
+    }
+  }, [])
 
   if (!groqApiKey) return <ApiKeySetup />
 
