@@ -1,14 +1,14 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useNodesState,
+  useEdgesState,
   type Connection,
   type NodeChange,
   type EdgeChange,
-  applyNodeChanges,
-  applyEdgeChanges,
   type Node,
   type Edge,
 } from '@xyflow/react'
@@ -69,36 +69,63 @@ export default function MindMapView() {
     setMapEdges: s.setMapEdges,
   })))
 
-  const flowNodes = mapNodes.map(toFlowNode)
-  const flowEdges = mapEdges.map(toFlowEdge)
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(mapNodes.map(toFlowNode))
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(mapEdges.map(toFlowEdge))
 
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    const updated = applyNodeChanges(changes, flowNodes)
-    setMapNodes(updated.map((n) => ({
-      id: n.id,
-      type: (n.data as { type: NodeType }).type,
-      label: (n.data as { label: string }).label,
-      position: n.position,
-    })))
-  }, [flowNodes, setMapNodes])
+  // Sync new/removed nodes from Zustand → React Flow (preserves measured state for existing nodes)
+  const syncedIds = useRef<Set<string>>(new Set(mapNodes.map(n => n.id)))
+  useEffect(() => {
+    const currentIds = new Set(mapNodes.map(n => n.id))
+    setFlowNodes(prev => {
+      const filtered = prev.filter(n => currentIds.has(n.id))
+      const existingIds = new Set(filtered.map(n => n.id))
+      const newNodes = mapNodes.filter(n => !existingIds.has(n.id)).map(toFlowNode)
+      return [...filtered, ...newNodes]
+    })
+    syncedIds.current = currentIds
+  }, [mapNodes])
 
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    const updated = applyEdgeChanges(changes, flowEdges)
-    setMapEdges(updated.map((e) => ({
-      id: e.id, source: e.source, target: e.target,
-      label: typeof (e as Edge).label === 'string' ? String((e as Edge).label) : undefined,
-    })))
-  }, [flowEdges, setMapEdges])
+  useEffect(() => {
+    setFlowEdges(mapEdges.map(toFlowEdge))
+  }, [mapEdges])
+
+  // Sync position changes from React Flow → Zustand
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    onNodesChange(changes)
+    const positionChanges = changes.filter(
+      (c): c is NodeChange & { type: 'position'; position: { x: number; y: number } } =>
+        c.type === 'position' && !!(c as NodeChange & { position?: unknown }).position
+    )
+    if (positionChanges.length > 0) {
+      setMapNodes(
+        mapNodes.map(n => {
+          const change = positionChanges.find(c => c.id === n.id)
+          return change ? { ...n, position: (change as { position: { x: number; y: number } }).position } : n
+        })
+      )
+    }
+  }, [onNodesChange, mapNodes, setMapNodes])
+
+  const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
+    onEdgesChange(changes)
+    const removedIds = changes.filter(c => c.type === 'remove').map(c => c.id)
+    if (removedIds.length > 0) {
+      setMapEdges(mapEdges.filter(e => !removedIds.includes(e.id)))
+    }
+  }, [onEdgesChange, mapEdges, setMapEdges])
 
   const onConnect = useCallback((params: Connection) => {
-    setMapEdges([...mapEdges, { id: `edge-manual-${nanoid()}`, source: params.source, target: params.target }])
-  }, [mapEdges, setMapEdges])
+    const newEdge: MapEdge = { id: `edge-manual-${nanoid()}`, source: params.source, target: params.target }
+    setMapEdges([...mapEdges, newEdge])
+    setFlowEdges(prev => [...prev, toFlowEdge(newEdge)])
+  }, [mapEdges, setMapEdges, setFlowEdges])
 
   const addNoteNode = () => {
-    setMapNodes([...mapNodes, {
+    const newNode: MapNode = {
       id: `node-note-${nanoid()}`, type: 'note', label: 'メモ',
       position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 },
-    }])
+    }
+    setMapNodes([...mapNodes, newNode])
   }
 
   return (
@@ -116,13 +143,21 @@ export default function MindMapView() {
         </button>
       </div>
 
-      <ReactFlow nodes={flowNodes} edges={flowEdges}
-        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
-        fitView proOptions={{ hideAttribution: true }}>
+      <ReactFlow
+        nodes={flowNodes}
+        edges={flowEdges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={onConnect}
+        fitView
+        proOptions={{ hideAttribution: true }}
+      >
         <Background color="#e2e8f0" gap={24} />
         <Controls style={{ background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }} />
-        <MiniMap style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
-          nodeColor={(n) => NODE_COLORS[(n.data as { type: NodeType }).type]?.border ?? '#94a3b8'} />
+        <MiniMap
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+          nodeColor={(n) => NODE_COLORS[(n.data as { type: NodeType }).type]?.border ?? '#94a3b8'}
+        />
       </ReactFlow>
 
       {mapNodes.length === 0 && (
