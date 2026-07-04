@@ -59,14 +59,20 @@ export const useAppStore = create<AppState>()(
       updateSelfItem: (id, patch) => set((s) => ({
         selfItems: s.selfItems.map((x) => x.id === id ? { ...x, ...patch } : x)
       })),
-      deleteSelfItem: (id) => set((s) => ({ selfItems: s.selfItems.filter((x) => x.id !== id) })),
+      deleteSelfItem: (id) => set((s) => ({
+        selfItems: s.selfItems.filter((x) => x.id !== id),
+        mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+      })),
 
       issues: [],
       addIssue: (issue) => set((s) => ({ issues: [...s.issues, issue] })),
       updateIssue: (id, patch) => set((s) => ({
         issues: s.issues.map((x) => x.id === id ? { ...x, ...patch } : x)
       })),
-      deleteIssue: (id) => set((s) => ({ issues: s.issues.filter((x) => x.id !== id) })),
+      deleteIssue: (id) => set((s) => ({
+        issues: s.issues.filter((x) => x.id !== id),
+        mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+      })),
 
       connections: [],
       addConnection: (conn) => set((s) => ({ connections: [...s.connections, conn] })),
@@ -77,7 +83,10 @@ export const useAppStore = create<AppState>()(
       updatePlan: (id, patch) => set((s) => ({
         plans: s.plans.map((x) => x.id === id ? { ...x, ...patch } : x)
       })),
-      deletePlan: (id) => set((s) => ({ plans: s.plans.filter((x) => x.id !== id) })),
+      deletePlan: (id) => set((s) => ({
+        plans: s.plans.filter((x) => x.id !== id),
+        mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+      })),
 
       mapNodes: [],
       mapEdges: [],

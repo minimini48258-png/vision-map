@@ -43,15 +43,20 @@ export interface Plan {
   createdAt: string
 }
 
-export type NodeType = 'self' | 'issue' | 'plan' | 'note'
+export type NodeType = 'self' | 'issue' | 'plan' | 'note' | 'rect' | 'circle' | 'diamond' | 'text'
 
 export interface MapNode {
   id: string
   type: NodeType
   label: string
-  refId?: string  // links to SelfItem / Issue / Plan id
+  refId?: string
   position: { x: number; y: number }
-  color?: string
+  width?: number
+  height?: number
+  bgColor?: string
+  textColor?: string
+  fontSize?: number
+  borderColor?: string
 }
 
 export interface MapEdge {
