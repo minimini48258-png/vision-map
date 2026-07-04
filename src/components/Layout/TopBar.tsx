@@ -1,13 +1,26 @@
-import { Network, GitBranch } from 'lucide-react'
+import { useState } from 'react'
+import { Network, GitBranch, RotateCcw } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import { useShallow } from 'zustand/react/shallow'
 import type { ViewMode } from '../../types'
 
 export default function TopBar() {
-  const { viewMode, setViewMode } = useAppStore(useShallow((s) => ({
+  const { viewMode, setViewMode, resetAll } = useAppStore(useShallow((s) => ({
     viewMode: s.viewMode,
     setViewMode: s.setViewMode,
+    resetAll: s.resetAll,
   })))
+  const [confirm, setConfirm] = useState(false)
+
+  const handleReset = () => {
+    if (confirm) {
+      resetAll()
+      setConfirm(false)
+    } else {
+      setConfirm(true)
+      setTimeout(() => setConfirm(false), 3000)
+    }
+  }
 
   return (
     <div className="h-11 flex items-center justify-between px-4 bg-white border-b border-gray-200">
@@ -28,7 +41,17 @@ export default function TopBar() {
         ))}
       </div>
 
-      <div className="w-20" />
+      <button
+        onClick={handleReset}
+        title="全データをリセット"
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors ${
+          confirm
+            ? 'bg-red-500 text-white hover:bg-red-600'
+            : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+        }`}>
+        <RotateCcw size={12} />
+        {confirm ? 'もう一度押すとリセット' : 'リセット'}
+      </button>
     </div>
   )
 }

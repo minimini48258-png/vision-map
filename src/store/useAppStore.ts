@@ -46,6 +46,8 @@ interface AppState {
 
   aiPanelOpen: boolean
   setAIPanelOpen: (open: boolean) => void
+
+  resetAll: () => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -106,6 +108,11 @@ export const useAppStore = create<AppState>()(
 
       aiPanelOpen: false,
       setAIPanelOpen: (open) => set({ aiPanelOpen: open }),
+
+      resetAll: () => set({
+        selfItems: [], issues: [], connections: [], plans: [],
+        mapNodes: [], mapEdges: [], aiMessages: [],
+      }),
     }),
     {
       name: 'vision-map-storage',
