@@ -141,15 +141,21 @@ function AddBizNodeModal({ onClose, onAdd }: {
 }
 
 // ── AI suggestions panel ──────────────────────────────────────
-type Suggestion = { id: string; sourceId: string; targetId: string; direction: '+' | '-'; reason: string }
+type NodeSuggestion = {
+  id: string
+  fromNodeId: string
+  fromLabel: string
+  suggestedLabel: string
+  direction: '+' | '-'
+  reason: string
+}
 
 function SuggestionsPanel({
-  suggestions, loading, nodeLabels, onAccept, onDismiss, onDismissAll,
+  suggestions, loading, onAccept, onDismiss, onDismissAll,
 }: {
-  suggestions: Suggestion[]
+  suggestions: NodeSuggestion[]
   loading: boolean
-  nodeLabels: Record<string, string>
-  onAccept: (s: Suggestion) => void
+  onAccept: (s: NodeSuggestion) => void
   onDismiss: (id: string) => void
   onDismissAll: () => void
 }) {
@@ -159,7 +165,7 @@ function SuggestionsPanel({
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Sparkles size={13} className="text-indigo-500" />
-          <span className="text-xs font-semibold text-gray-700">AIのつながり提案</span>
+          <span className="text-xs font-semibold text-gray-700">AI関連要素の提案</span>
         </div>
         {suggestions.length > 0 && (
           <button onClick={onDismissAll} className="text-xs text-gray-400 hover:text-gray-600">全て消す</button>
@@ -168,22 +174,21 @@ function SuggestionsPanel({
       <div className="max-h-80 overflow-y-auto">
         {loading && (
           <div className="flex items-center gap-2 px-4 py-3 text-xs text-gray-500">
-            <Loader2 size={12} className="animate-spin" /> 分析中…
+            <Loader2 size={12} className="animate-spin" /> 関連要素を提案中…
           </div>
         )}
         {suggestions.map((s) => {
           const isPos = s.direction === '+'
           return (
             <div key={s.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
-              <div className="flex items-start gap-2 mb-2">
+              <div className="text-xs text-gray-400 mb-1.5">
+                「<span className="text-gray-600 font-medium">{s.fromLabel}</span>」の関連要素
+              </div>
+              <div className="flex items-center gap-2 mb-2">
                 <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${isPos ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {s.direction}
                 </span>
-                <div className="text-xs text-gray-700 leading-relaxed">
-                  <span className="font-medium">{nodeLabels[s.sourceId] ?? s.sourceId}</span>
-                  <span className="text-gray-400 mx-1">→</span>
-                  <span className="font-medium">{nodeLabels[s.targetId] ?? s.targetId}</span>
-                </div>
+                <span className="text-xs font-semibold text-gray-800">{s.suggestedLabel}</span>
               </div>
               {s.reason && (
                 <p className="text-xs text-gray-400 mb-2 leading-relaxed">{s.reason}</p>
@@ -191,7 +196,7 @@ function SuggestionsPanel({
               <div className="flex gap-1.5">
                 <button onClick={() => onAccept(s)}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500">
-                  <Check size={10} /> 採用
+                  <Check size={10} /> 追加
                 </button>
                 <button onClick={() => onDismiss(s.id)}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50">
@@ -255,7 +260,7 @@ export default function IssueMapView() {
     addBusinessNode: s.addBusinessNode,
   })))
 
-  const { suggestCausalConnections, loading: aiLoading } = useGroqAI()
+  const { suggestRelatedNodes, loading: aiLoading } = useGroqAI()
 
   // Build canonical node list
   const allNodeDefs = useMemo(() => {
@@ -267,12 +272,6 @@ export default function IssueMapView() {
     businessNodes.forEach((b) => defs.push({ nodeId: nodeIdFor('biz', b.id), label: b.label, kind: 'business' }))
     return { defs, total }
   }, [selfItems, issues, plans, businessNodes])
-
-  const nodeLabels = useMemo(() => {
-    const m: Record<string, string> = {}
-    allNodeDefs.defs.forEach((d) => { m[d.nodeId] = d.label })
-    return m
-  }, [allNodeDefs])
 
   // React Flow state
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(
@@ -312,35 +311,45 @@ export default function IssueMapView() {
   }, [issueMapEdges])
 
   // AI suggestions
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<NodeSuggestion[]>([])
   const prevNodeCount = useRef(allNodeDefs.defs.length)
 
   useEffect(() => {
     const current = allNodeDefs.defs.length
-    if (current <= prevNodeCount.current || current < 2) {
+    if (current <= prevNodeCount.current || current < 1) {
       prevNodeCount.current = current
       return
     }
-    // A new node was added
+    // A new node was added — suggest related new nodes for it
     const newNode = allNodeDefs.defs[current - 1]
     prevNodeCount.current = current
 
-    const forAI = allNodeDefs.defs.map((d) => ({
-      id: d.nodeId, label: d.label, nodeType: d.kind,
-    }))
-    suggestCausalConnections(forAI, newNode.nodeId).then((results) => {
-      const already = new Set(issueMapEdges.map((e) => `${e.source}>${e.target}`))
-      const newSuggestions = results
-        .filter((r) => !already.has(`${r.sourceId}>${r.targetId}`))
-        .map((r) => ({ ...r, id: nanoid() }))
+    const existingLabels = allNodeDefs.defs.slice(0, -1).map((d) => d.label)
+    suggestRelatedNodes(newNode.label, existingLabels).then((results) => {
+      const newSuggestions: NodeSuggestion[] = results.map((r) => ({
+        id: nanoid(),
+        fromNodeId: newNode.nodeId,
+        fromLabel: newNode.label,
+        suggestedLabel: r.label,
+        direction: r.direction,
+        reason: r.reason,
+      }))
       if (newSuggestions.length > 0) {
         setSuggestions((prev) => [...prev, ...newSuggestions])
       }
     })
   }, [nodeIdKey])
 
-  const handleAcceptSuggestion = (s: Suggestion) => {
-    addIssueMapEdge({ id: nanoid(), source: s.sourceId, target: s.targetId, direction: s.direction, reason: s.reason })
+  const handleAcceptSuggestion = (s: NodeSuggestion) => {
+    const newId = nanoid()
+    addBusinessNode({ id: newId, label: s.suggestedLabel, description: s.reason })
+    addIssueMapEdge({
+      id: `edge-${nanoid()}`,
+      source: s.fromNodeId,
+      target: `biz-${newId}`,
+      direction: s.direction,
+      reason: s.reason,
+    })
     setSuggestions((prev) => prev.filter((x) => x.id !== s.id))
   }
 
@@ -381,7 +390,6 @@ export default function IssueMapView() {
       <SuggestionsPanel
         suggestions={suggestions}
         loading={aiLoading}
-        nodeLabels={nodeLabels}
         onAccept={handleAcceptSuggestion}
         onDismiss={(id) => setSuggestions((prev) => prev.filter((s) => s.id !== id))}
         onDismissAll={() => setSuggestions([])}
@@ -448,7 +456,7 @@ export default function IssueMapView() {
               左パネルで自己探索・課題・計画を追加するか<br />
               「事業構想を追加」ボタンで要素を配置してください
             </p>
-            <p className="text-xs text-gray-300 mt-2">要素を繋ぐとAIが因果関係を提案します</p>
+            <p className="text-xs text-gray-300 mt-2">要素を追加するとAIが関連する課題・影響を提案します</p>
           </div>
         </div>
       )}
