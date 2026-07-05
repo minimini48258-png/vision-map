@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { nanoid } from 'nanoid'
-import { Plus, Check, X, Sparkles, Loader2, Pencil } from 'lucide-react'
+import { Plus, Check, X, Sparkles, Loader2, Type } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import { useShallow } from 'zustand/react/shallow'
 import { useGroqAI } from '../../hooks/useGroqAI'
@@ -25,7 +25,7 @@ const NODE_STYLES = {
   business: { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8', label: '事業構想' },
 }
 
-// ── Generic node component ────────────────────────────────────
+// ── Issue node ────────────────────────────────────────────────
 function IssueNode({ data, selected }: { data: Record<string, unknown>; selected?: boolean }) {
   const kind = (data.kind ?? 'issue') as keyof typeof NODE_STYLES
   const style = NODE_STYLES[kind] ?? NODE_STYLES.issue
@@ -54,14 +54,37 @@ function IssueNode({ data, selected }: { data: Record<string, unknown>; selected
   )
 }
 
-const nodeTypes = { issueNode: IssueNode }
+// ── Text annotation node ──────────────────────────────────────
+function AnnotationNode({ data, selected }: { data: Record<string, unknown>; selected?: boolean }) {
+  return (
+    <div style={{
+      background: '#fefce8',
+      border: `1.5px solid ${selected ? '#6366f1' : '#fde047'}`,
+      color: '#713f12',
+      borderRadius: 8,
+      padding: '6px 12px',
+      fontSize: 12,
+      minWidth: 60,
+      maxWidth: 240,
+      wordBreak: 'break-word',
+      boxShadow: selected ? '0 0 0 2px #a5b4fc' : '0 2px 6px rgba(0,0,0,0.08)',
+      cursor: 'default',
+      whiteSpace: 'pre-wrap',
+    }}>
+      {data.text as string}
+    </div>
+  )
+}
 
-// ── Custom causal edge — +/- badge is clickable to toggle ─────
+const nodeTypes = { issueNode: IssueNode, annotationNode: AnnotationNode }
+
+// ── Custom causal edge — +/- clickable toggle + delete button ──
 function CausalEdge({
   id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
-  data, markerEnd,
+  data, markerEnd, selected,
 }: EdgeProps) {
   const updateIssueMapEdge = useAppStore((s) => s.updateIssueMapEdge)
+  const deleteIssueMapEdge = useAppStore((s) => s.deleteIssueMapEdge)
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition,
@@ -81,7 +104,11 @@ function CausalEdge({
           transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
           pointerEvents: 'all',
           zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
         }}>
+          {/* Direction toggle badge */}
           <div
             onClick={() => updateIssueMapEdge(id, { direction: (dir === '+' ? '-' : '+') as '+' | '-' })}
             style={{
@@ -99,6 +126,29 @@ function CausalEdge({
             title={reason ? `${reason}\n（クリックで+/-切り替え）` : 'クリックで+/-切り替え'}>
             {dir}
           </div>
+          {/* Delete button — shown when edge is selected */}
+          {selected && (
+            <button
+              onClick={(e) => { e.stopPropagation(); deleteIssueMapEdge(id) }}
+              style={{
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                color: '#dc2626',
+                borderRadius: '50%',
+                width: 18,
+                height: 18,
+                fontSize: 10,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+              title="削除">
+              ×
+            </button>
+          )}
         </div>
       </EdgeLabelRenderer>
     </>
@@ -140,6 +190,41 @@ function AddBizNodeModal({ onClose, onAdd }: {
           <button onClick={() => label.trim() && onAdd(label, desc)}
             disabled={!label.trim()}
             className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-40">
+            追加
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Text annotation modal ─────────────────────────────────────
+function TextAnnotationModal({ onClose, onConfirm }: {
+  onClose: () => void
+  onConfirm: (text: string) => void
+}) {
+  const [val, setVal] = useState('')
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+      <div className="bg-white rounded-2xl shadow-2xl p-5 w-80">
+        <p className="text-sm font-semibold text-gray-800 mb-3">テキストを追加</p>
+        <textarea
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey && val.trim()) onConfirm(val)
+            if (e.key === 'Escape') onClose()
+          }}
+          rows={3}
+          placeholder="テキスト… (Ctrl+Enter で確定)"
+          className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-none"
+        />
+        <div className="flex gap-2 mt-3 justify-end">
+          <button onClick={onClose} className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">キャンセル</button>
+          <button onClick={() => val.trim() && onConfirm(val)}
+            disabled={!val.trim()}
+            className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-40">
             追加
           </button>
         </div>
@@ -261,23 +346,6 @@ function defaultPosition(index: number, total: number): { x: number; y: number }
   return { x: 400 + r * Math.cos(angle), y: 300 + r * Math.sin(angle) }
 }
 
-// ── Draw helpers ──────────────────────────────────────────────
-type DrawPath = { d: string; color: string }
-const DRAW_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#111827']
-
-function buildSmoothPath(pts: { x: number; y: number }[]): string {
-  if (pts.length < 2) return ''
-  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`
-  let d = `M ${pts[0].x} ${pts[0].y}`
-  for (let i = 1; i < pts.length - 1; i++) {
-    const midX = (pts[i].x + pts[i + 1].x) / 2
-    const midY = (pts[i].y + pts[i + 1].y) / 2
-    d += ` Q ${pts[i].x} ${pts[i].y} ${midX} ${midY}`
-  }
-  d += ` L ${pts[pts.length - 1].x} ${pts[pts.length - 1].y}`
-  return d
-}
-
 // ── Helpers ───────────────────────────────────────────────────
 function nodeIdFor(kind: string, id: string) { return `${kind}-${id}` }
 
@@ -349,7 +417,7 @@ export default function IssueMapView() {
   )
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(issueMapEdges.map(toFlowEdge))
 
-  // Sync when node set changes
+  // Sync when node set changes — preserve annotation nodes
   const nodeIdKey = allNodeDefs.defs.map((d) => d.nodeId).join(',')
   const prevNodeIdKey = useRef(nodeIdKey)
 
@@ -359,7 +427,9 @@ export default function IssueMapView() {
 
     const currentIds = new Set(allNodeDefs.defs.map((d) => d.nodeId))
     setFlowNodes((prev) => {
-      const filtered = prev.filter((n) => currentIds.has(n.id))
+      const annotations = prev.filter((n) => n.id.startsWith('annotation-'))
+      const dataPrev = prev.filter((n) => !n.id.startsWith('annotation-'))
+      const filtered = dataPrev.filter((n) => currentIds.has(n.id))
       const existingIds = new Set(filtered.map((n) => n.id))
       const newNodes = allNodeDefs.defs
         .filter((d) => !existingIds.has(d.nodeId))
@@ -368,7 +438,7 @@ export default function IssueMapView() {
           return toFlowNode(d.nodeId, d.label, d.kind,
             issueMapPositions[d.nodeId] ?? defaultPosition(absIdx, allNodeDefs.total))
         })
-      return [...filtered, ...newNodes]
+      return [...filtered, ...newNodes, ...annotations]
     })
   }, [nodeIdKey])
 
@@ -377,10 +447,11 @@ export default function IssueMapView() {
     setFlowEdges(issueMapEdges.map(toFlowEdge))
   }, [issueMapEdges])
 
-  // AI suggestions — propose related new issues for each added node
+  // ── AI suggestions ────────────────────────────────────────────
   const [suggestions, setSuggestions] = useState<NodeSuggestion[]>([])
   const prevNodeCount = useRef(allNodeDefs.defs.length)
 
+  // Auto-suggest when a new node is added
   useEffect(() => {
     const current = allNodeDefs.defs.length
     if (current <= prevNodeCount.current || current < 1) {
@@ -389,20 +460,25 @@ export default function IssueMapView() {
     }
     const newNode = allNodeDefs.defs[current - 1]
     prevNodeCount.current = current
+    triggerSuggest(newNode.nodeId, newNode.label)
+  }, [nodeIdKey])
 
-    const existingLabels = allNodeDefs.defs.slice(0, -1).map((d) => d.label)
-    suggestRelatedNodes(newNode.label, existingLabels).then((results) => {
+  const triggerSuggest = useCallback((fromNodeId: string, fromLabel: string) => {
+    const existingLabels = allNodeDefs.defs
+      .filter((d) => d.nodeId !== fromNodeId)
+      .map((d) => d.label)
+    suggestRelatedNodes(fromLabel, existingLabels).then((results) => {
       const newSuggestions: NodeSuggestion[] = results.map((r) => ({
         id: nanoid(),
-        fromNodeId: newNode.nodeId,
-        fromLabel: newNode.label,
+        fromNodeId,
+        fromLabel,
         suggestedLabel: r.label,
         direction: r.direction,
         reason: r.reason,
       }))
       if (newSuggestions.length > 0) setSuggestions((prev) => [...prev, ...newSuggestions])
     })
-  }, [nodeIdKey])
+  }, [allNodeDefs.defs, suggestRelatedNodes])
 
   // Accept suggestion → add as Issue + causal edge
   const handleAcceptSuggestion = (s: NodeSuggestion) => {
@@ -418,13 +494,20 @@ export default function IssueMapView() {
     setSuggestions((prev) => prev.filter((x) => x.id !== s.id))
   }
 
-  // Node selection panel
+  // ── Node selection panel ──────────────────────────────────────
   const [selectedPanel, setSelectedPanel] = useState<{ id: string; kind: keyof typeof NODE_STYLES; label: string } | null>(null)
 
   const handleNodeClick = useCallback((_: unknown, node: Node) => {
+    // Annotation nodes only select (no panel)
+    if (node.id.startsWith('annotation-')) return
+
     const def = allNodeDefs.defs.find((d) => d.nodeId === node.id)
-    if (def) setSelectedPanel({ id: node.id, kind: def.kind, label: def.label })
-  }, [allNodeDefs.defs])
+    if (!def) return
+    setSelectedPanel({ id: node.id, kind: def.kind, label: def.label })
+
+    // Trigger AI suggestions for the selected node
+    triggerSuggest(def.nodeId, def.label)
+  }, [allNodeDefs.defs, triggerSuggest])
 
   const handleConvertToIssue = useCallback(() => {
     if (!selectedPanel) return
@@ -442,7 +525,7 @@ export default function IssueMapView() {
     setSelectedPanel(null)
   }, [selectedPanel, deleteBusinessNode, deleteIssue])
 
-  // Connection mode + edge handlers
+  // ── Connection mode + edge handlers ──────────────────────────
   const [connectionMode, setConnectionMode] = useState<'+' | '-'>('+')
   const [showBizModal, setShowBizModal] = useState(false)
 
@@ -463,7 +546,10 @@ export default function IssueMapView() {
   }, [updateIssueMapEdge])
 
   const handleNodeDragStop = useCallback((_: unknown, node: Node) => {
-    updateIssueMapPosition(node.id, node.position)
+    // Don't persist annotation node positions to Zustand
+    if (!node.id.startsWith('annotation-')) {
+      updateIssueMapPosition(node.id, node.position)
+    }
   }, [updateIssueMapPosition])
 
   const handleEdgesChange = useCallback((changes: Parameters<typeof onEdgesChange>[0]) => {
@@ -478,40 +564,32 @@ export default function IssueMapView() {
     setShowBizModal(false)
   }
 
-  // ── Draw mode ─────────────────────────────────────────────────
-  const [drawMode, setDrawMode] = useState(false)
-  const [drawColor, setDrawColor] = useState(DRAW_COLORS[0])
-  const [drawPaths, setDrawPaths] = useState<DrawPath[]>([])
-  const [currentDrawPath, setCurrentDrawPath] = useState('')
+  // ── Text annotation tool ──────────────────────────────────────
+  const [textMode, setTextMode] = useState(false)
+  const [pendingAnnotationPos, setPendingAnnotationPos] = useState<{ x: number; y: number } | null>(null)
+  const rfInstanceRef = useRef<{ screenToFlowPosition: (p: { x: number; y: number }) => { x: number; y: number } } | null>(null)
 
-  const drawState = useRef({ isDrawing: false, points: [] as { x: number; y: number }[], color: DRAW_COLORS[0] })
-
-  const handleDrawPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drawState.current.isDrawing = true
-    drawState.current.color = drawColor
-    drawState.current.points = []
-    const rect = e.currentTarget.getBoundingClientRect()
-    drawState.current.points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-  }, [drawColor])
-
-  const handleDrawPointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    if (!drawState.current.isDrawing) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    drawState.current.points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-    setCurrentDrawPath(buildSmoothPath(drawState.current.points))
-  }, [])
-
-  const handleDrawPointerUp = useCallback(() => {
-    if (!drawState.current.isDrawing) return
-    drawState.current.isDrawing = false
-    const finalPath = buildSmoothPath(drawState.current.points)
-    if (finalPath) {
-      setDrawPaths((prev) => [...prev, { d: finalPath, color: drawState.current.color }])
+  const handlePaneClick = useCallback((e: React.MouseEvent) => {
+    setSelectedPanel(null)
+    if (textMode && rfInstanceRef.current) {
+      const flowPos = rfInstanceRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      setPendingAnnotationPos(flowPos)
     }
-    setCurrentDrawPath('')
-    drawState.current.points = []
-  }, [])
+  }, [textMode])
+
+  const handleAddAnnotation = useCallback((text: string) => {
+    if (!pendingAnnotationPos) return
+    const newNode: Node = {
+      id: `annotation-${nanoid()}`,
+      type: 'annotationNode',
+      position: pendingAnnotationPos,
+      data: { text },
+      style: { width: 'auto', height: 'auto' },
+    }
+    setFlowNodes((prev) => [...prev, newNode])
+    setPendingAnnotationPos(null)
+    setTextMode(false)
+  }, [pendingAnnotationPos, setFlowNodes])
 
   const isEmpty = allNodeDefs.defs.length === 0
 
@@ -537,92 +615,53 @@ export default function IssueMapView() {
         />
       )}
 
-      {/* Freehand draw SVG overlay */}
-      <svg
-        style={{
-          position: 'absolute', inset: 0, zIndex: 25,
-          width: '100%', height: '100%',
-          pointerEvents: drawMode ? 'auto' : 'none',
-          cursor: drawMode ? 'crosshair' : 'default',
-        }}
-        onPointerDown={handleDrawPointerDown}
-        onPointerMove={handleDrawPointerMove}
-        onPointerUp={handleDrawPointerUp}
-      >
-        {drawPaths.map((p, i) => (
-          <path key={i} d={p.d} stroke={p.color} strokeWidth={2.5}
-            fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {currentDrawPath && (
-          <path d={currentDrawPath} stroke={drawColor} strokeWidth={2.5}
-            fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        )}
-      </svg>
+      {/* Text mode hint */}
+      {textMode && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-indigo-600 text-white text-xs px-4 py-1.5 rounded-full shadow pointer-events-none">
+          キャンバスをクリックしてテキストを配置
+        </div>
+      )}
 
       {/* Bottom toolbar */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2">
-        {!drawMode && (
-          <>
-            {/* Connection type toggle */}
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <span>接続:</span>
-              <button onClick={() => setConnectionMode('+')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${connectionMode === '+' ? 'bg-green-100 text-green-700 border border-green-300' : 'text-gray-400 hover:bg-gray-100'}`}>
-                ＋強化
-              </button>
-              <button onClick={() => setConnectionMode('-')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${connectionMode === '-' ? 'bg-red-100 text-red-700 border border-red-300' : 'text-gray-400 hover:bg-gray-100'}`}>
-                −抑制
-              </button>
-            </div>
-            <div className="w-px h-5 bg-gray-200" />
-            <button onClick={() => setShowBizModal(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-colors">
-              <Plus size={12} />
-              事業構想を追加
-            </button>
-            <div className="w-px h-5 bg-gray-200" />
-            {/* Legend */}
-            <div className="flex gap-2">
-              {Object.entries(NODE_STYLES).map(([k, s]) => (
-                <div key={k} className="flex items-center gap-1 text-xs" style={{ color: s.text }}>
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: s.border }} />
-                  {s.label}
-                </div>
-              ))}
-            </div>
-            <div className="w-px h-5 bg-gray-200" />
-          </>
-        )}
-
-        {/* Draw mode toggle */}
-        <button onClick={() => setDrawMode((v) => !v)}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-colors ${
-            drawMode ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-100'
-          }`}>
-          <Pencil size={12} />
-          {drawMode ? '手書き中' : '手書き'}
+        {/* Connection type toggle */}
+        <div className="flex items-center gap-1 text-xs text-gray-500">
+          <span>接続:</span>
+          <button onClick={() => setConnectionMode('+')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${connectionMode === '+' ? 'bg-green-100 text-green-700 border border-green-300' : 'text-gray-400 hover:bg-gray-100'}`}>
+            ＋強化
+          </button>
+          <button onClick={() => setConnectionMode('-')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${connectionMode === '-' ? 'bg-red-100 text-red-700 border border-red-300' : 'text-gray-400 hover:bg-gray-100'}`}>
+            −抑制
+          </button>
+        </div>
+        <div className="w-px h-5 bg-gray-200" />
+        {/* Add business node */}
+        <button onClick={() => setShowBizModal(true)}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-colors">
+          <Plus size={12} />
+          事業構想を追加
         </button>
-
-        {drawMode && (
-          <>
-            {DRAW_COLORS.map((c) => (
-              <button key={c} onClick={() => setDrawColor(c)}
-                className="w-5 h-5 rounded-full border-2 transition-transform"
-                style={{
-                  background: c,
-                  borderColor: drawColor === c ? '#6366f1' : 'white',
-                  transform: drawColor === c ? 'scale(1.25)' : 'scale(1)',
-                }} />
-            ))}
-            {drawPaths.length > 0 && (
-              <button onClick={() => setDrawPaths([])}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                <X size={10} /> 全消し
-              </button>
-            )}
-          </>
-        )}
+        <div className="w-px h-5 bg-gray-200" />
+        {/* Text tool */}
+        <button onClick={() => setTextMode((v) => !v)}
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-colors ${
+            textMode ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-100'
+          }`}>
+          <Type size={12} />
+          テキスト
+        </button>
+        <div className="w-px h-5 bg-gray-200" />
+        {/* Legend */}
+        <div className="flex gap-2">
+          {Object.entries(NODE_STYLES).map(([k, s]) => (
+            <div key={k} className="flex items-center gap-1 text-xs" style={{ color: s.text }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: s.border }} />
+              {s.label}
+            </div>
+          ))}
+        </div>
       </div>
 
       <ReactFlow
@@ -635,15 +674,16 @@ export default function IssueMapView() {
         onReconnect={handleReconnect as any}
         onNodeDragStop={handleNodeDragStop}
         onNodeClick={handleNodeClick}
-        onPaneClick={() => setSelectedPanel(null)}
+        onPaneClick={handlePaneClick}
+        onInit={(instance) => { rfInstanceRef.current = instance as typeof rfInstanceRef.current }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
         deleteKeyCode="Delete"
-        panOnDrag={!drawMode}
-        nodesDraggable={!drawMode}
-        nodesConnectable={!drawMode}
+        panOnDrag={!textMode}
+        nodesDraggable={!textMode}
+        nodesConnectable={!textMode}
       >
         <Background color="#cbd5e1" gap={24} size={1} />
         <Controls style={{ background: '#fff', border: '1px solid #e2e8f0' }} />
@@ -660,13 +700,20 @@ export default function IssueMapView() {
               左パネルで自己探索・課題・計画を追加するか<br />
               「事業構想を追加」ボタンで要素を配置してください
             </p>
-            <p className="text-xs text-gray-300 mt-2">要素を追加するとAIが関連課題を提案します</p>
+            <p className="text-xs text-gray-300 mt-2">ノードを選択するとAIが関連課題を提案します</p>
           </div>
         </div>
       )}
 
       {showBizModal && (
         <AddBizNodeModal onClose={() => setShowBizModal(false)} onAdd={handleAddBizNode} />
+      )}
+
+      {pendingAnnotationPos && (
+        <TextAnnotationModal
+          onClose={() => { setPendingAnnotationPos(null); setTextMode(false) }}
+          onConfirm={handleAddAnnotation}
+        />
       )}
     </div>
   )
