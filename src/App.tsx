@@ -28,13 +28,14 @@ export default function App() {
     aiPanelOpen: s.aiPanelOpen,
   })))
 
-  // Clean up orphaned map nodes on startup
-  const { selfItems, issues, plans, mapNodes, setMapNodes } = useAppStore(useShallow((s) => ({
+  // Clean up orphaned map nodes on startup + sync view → module
+  const { selfItems, issues, plans, mapNodes, setMapNodes, setActiveModule } = useAppStore(useShallow((s) => ({
     selfItems: s.selfItems,
     issues: s.issues,
     plans: s.plans,
     mapNodes: s.mapNodes,
     setMapNodes: s.setMapNodes,
+    setActiveModule: s.setActiveModule,
   })))
 
   useEffect(() => {
@@ -48,6 +49,12 @@ export default function App() {
       setMapNodes(cleaned)
     }
   }, [])
+
+  // Auto-switch left panel to match current view
+  useEffect(() => {
+    if (viewMode === 'mindmap') setActiveModule('self')
+    else if (viewMode === 'issuemap') setActiveModule('issues')
+  }, [viewMode])
 
   if (!groqApiKey) return <ApiKeySetup />
 

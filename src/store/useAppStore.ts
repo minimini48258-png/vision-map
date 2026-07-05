@@ -39,12 +39,14 @@ interface AppState {
   issueMapEdges: IssueMapEdge[]
   addIssueMapEdge: (edge: IssueMapEdge) => void
   deleteIssueMapEdge: (id: string) => void
+  updateIssueMapEdge: (id: string, patch: Partial<IssueMapEdge>) => void
   issueMapPositions: Record<string, { x: number; y: number }>
   updateIssueMapPosition: (id: string, pos: { x: number; y: number }) => void
   businessNodes: BusinessNode[]
   addBusinessNode: (node: BusinessNode) => void
   updateBusinessNode: (id: string, patch: Partial<BusinessNode>) => void
   deleteBusinessNode: (id: string) => void
+  convertBusinessNodeToIssue: (bizId: string, newIssue: Issue) => void
 
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -123,6 +125,9 @@ export const useAppStore = create<AppState>()(
       issueMapEdges: [],
       addIssueMapEdge: (edge) => set((s) => ({ issueMapEdges: [...s.issueMapEdges, edge] })),
       deleteIssueMapEdge: (id) => set((s) => ({ issueMapEdges: s.issueMapEdges.filter((e) => e.id !== id) })),
+      updateIssueMapEdge: (id, patch) => set((s) => ({
+        issueMapEdges: s.issueMapEdges.map((e) => e.id === id ? { ...e, ...patch } : e),
+      })),
       issueMapPositions: {},
       updateIssueMapPosition: (id, pos) => set((s) => ({
         issueMapPositions: { ...s.issueMapPositions, [id]: pos },
@@ -141,6 +146,24 @@ export const useAppStore = create<AppState>()(
           (e) => e.source !== `biz-${id}` && e.target !== `biz-${id}`
         ),
       })),
+      convertBusinessNodeToIssue: (bizId, newIssue) => set((s) => {
+        const oldFlowId = `biz-${bizId}`
+        const newFlowId = `issue-${newIssue.id}`
+        const pos = s.issueMapPositions[oldFlowId]
+        const positions = { ...s.issueMapPositions }
+        delete positions[oldFlowId]
+        if (pos) positions[newFlowId] = pos
+        return {
+          businessNodes: s.businessNodes.filter((n) => n.id !== bizId),
+          issues: [...s.issues, newIssue],
+          issueMapPositions: positions,
+          issueMapEdges: s.issueMapEdges.map((e) => ({
+            ...e,
+            source: e.source === oldFlowId ? newFlowId : e.source,
+            target: e.target === oldFlowId ? newFlowId : e.target,
+          })),
+        }
+      }),
 
       viewMode: 'mindmap',
       setViewMode: (mode) => set({ viewMode: mode }),

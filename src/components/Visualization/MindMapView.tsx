@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import {
   ReactFlow,
   Background,
@@ -226,6 +227,23 @@ function toFlowEdge(e: MapEdge): Edge {
   }
 }
 
+// ── Draw helpers ──────────────────────────────────────────────
+type DrawPath = { d: string; color: string }
+const DRAW_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#111827']
+
+function buildSmoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return ''
+  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 1; i < pts.length - 1; i++) {
+    const midX = (pts[i].x + pts[i + 1].x) / 2
+    const midY = (pts[i].y + pts[i + 1].y) / 2
+    d += ` Q ${pts[i].x} ${pts[i].y} ${midX} ${midY}`
+  }
+  d += ` L ${pts[pts.length - 1].x} ${pts[pts.length - 1].y}`
+  return d
+}
+
 // ── Toolbar config ────────────────────────────────────────────
 type ToolType = 'select' | 'rect' | 'circle' | 'diamond' | 'text' | 'note'
 
@@ -370,6 +388,38 @@ export default function MindMapView() {
   const [pendingTool, setPendingTool] = useState<ToolType | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
+  // Draw mode
+  const [drawMode, setDrawMode] = useState(false)
+  const [drawColor, setDrawColor] = useState(DRAW_COLORS[0])
+  const [drawPaths, setDrawPaths] = useState<DrawPath[]>([])
+  const [currentDrawPath, setCurrentDrawPath] = useState('')
+  const drawState = useRef({ isDrawing: false, points: [] as { x: number; y: number }[], color: DRAW_COLORS[0] })
+
+  const handleDrawPointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drawState.current.isDrawing = true
+    drawState.current.color = drawColor
+    drawState.current.points = []
+    const rect = e.currentTarget.getBoundingClientRect()
+    drawState.current.points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+  }, [drawColor])
+
+  const handleDrawPointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (!drawState.current.isDrawing) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    drawState.current.points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setCurrentDrawPath(buildSmoothPath(drawState.current.points))
+  }, [])
+
+  const handleDrawPointerUp = useCallback(() => {
+    if (!drawState.current.isDrawing) return
+    drawState.current.isDrawing = false
+    const finalPath = buildSmoothPath(drawState.current.points)
+    if (finalPath) setDrawPaths((prev) => [...prev, { d: finalPath, color: drawState.current.color }])
+    setCurrentDrawPath('')
+    drawState.current.points = []
+  }, [])
+
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const rfInstance = useRef<{ screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number } } | null>(null)
 
@@ -491,9 +541,31 @@ export default function MindMapView() {
 
   return (
     <div ref={reactFlowWrapper} className="relative w-full h-full bg-gray-50">
+      {/* Freehand draw SVG overlay */}
+      <svg
+        style={{
+          position: 'absolute', inset: 0, zIndex: 25,
+          width: '100%', height: '100%',
+          pointerEvents: drawMode ? 'auto' : 'none',
+          cursor: drawMode ? 'crosshair' : 'default',
+        }}
+        onPointerDown={handleDrawPointerDown}
+        onPointerMove={handleDrawPointerMove}
+        onPointerUp={handleDrawPointerUp}
+      >
+        {drawPaths.map((p, i) => (
+          <path key={i} d={p.d} stroke={p.color} strokeWidth={2.5}
+            fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+        {currentDrawPath && (
+          <path d={currentDrawPath} stroke={drawColor} strokeWidth={2.5}
+            fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+      </svg>
+
       {/* Floating toolbar */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-white border border-gray-200 rounded-2xl shadow-lg px-3 py-2">
-        {TOOLS.map((tool) => (
+        {!drawMode && TOOLS.map((tool) => (
           <button key={tool.type} onClick={() => setActiveTool(tool.type)}
             title={tool.label}
             className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl text-sm transition-colors ${
@@ -505,19 +577,53 @@ export default function MindMapView() {
             <span className="text-[9px] mt-0.5 leading-none">{tool.label}</span>
           </button>
         ))}
-        <div className="w-px h-6 bg-gray-200 mx-1" />
-        <button
-          onClick={() => {
-            if (selectedNodeId) {
-              const n = mapNodes.find((x) => x.id === selectedNodeId)
-              if (n && !n.refId) deleteNode(selectedNodeId)
-            }
-          }}
-          title="削除 (Delete)"
-          className="flex flex-col items-center justify-center w-10 h-10 rounded-xl text-sm text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-          <span className="text-base leading-none">🗑</span>
-          <span className="text-[9px] mt-0.5 leading-none">削除</span>
+        {!drawMode && (
+          <>
+            <div className="w-px h-6 bg-gray-200 mx-1" />
+            <button
+              onClick={() => {
+                if (selectedNodeId) {
+                  const n = mapNodes.find((x) => x.id === selectedNodeId)
+                  if (n && !n.refId) deleteNode(selectedNodeId)
+                }
+              }}
+              title="削除 (Delete)"
+              className="flex flex-col items-center justify-center w-10 h-10 rounded-xl text-sm text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+              <span className="text-base leading-none">🗑</span>
+              <span className="text-[9px] mt-0.5 leading-none">削除</span>
+            </button>
+            <div className="w-px h-6 bg-gray-200 mx-1" />
+          </>
+        )}
+        {/* Draw mode toggle */}
+        <button onClick={() => { setDrawMode((v) => !v); setActiveTool('select') }}
+          title="手書き"
+          className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl text-sm transition-colors ${
+            drawMode ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
+          }`}>
+          <Pencil size={14} />
+          <span className="text-[9px] mt-0.5 leading-none">手書き</span>
         </button>
+        {drawMode && (
+          <>
+            <div className="w-px h-6 bg-gray-200 mx-1" />
+            {DRAW_COLORS.map((c) => (
+              <button key={c} onClick={() => setDrawColor(c)}
+                className="w-5 h-5 rounded-full border-2 transition-transform"
+                style={{
+                  background: c,
+                  borderColor: drawColor === c ? '#6366f1' : 'white',
+                  transform: drawColor === c ? 'scale(1.25)' : 'scale(1)',
+                }} />
+            ))}
+            {drawPaths.length > 0 && (
+              <button onClick={() => setDrawPaths([])}
+                className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors ml-1">
+                全消し
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Style panel */}
@@ -546,7 +652,8 @@ export default function MindMapView() {
         nodeTypes={nodeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
-        panOnDrag={activeTool === 'select'}
+        panOnDrag={activeTool === 'select' && !drawMode}
+        nodesDraggable={!drawMode}
         selectionOnDrag={false}
         deleteKeyCode="Delete"
       >
