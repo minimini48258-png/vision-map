@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
   SelfItem, Issue, Connection, Plan,
-  MapNode, MapEdge, ViewMode, ActiveModule, AIMessage
+  MapNode, MapEdge, ViewMode, ActiveModule, AIMessage,
+  IssueMapEdge, BusinessNode,
 } from '../types'
 
 interface AppState {
@@ -34,6 +35,17 @@ interface AppState {
   setMapEdges: (edges: MapEdge[]) => void
   addMapNode: (node: MapNode) => void
 
+  // Issue Map
+  issueMapEdges: IssueMapEdge[]
+  addIssueMapEdge: (edge: IssueMapEdge) => void
+  deleteIssueMapEdge: (id: string) => void
+  issueMapPositions: Record<string, { x: number; y: number }>
+  updateIssueMapPosition: (id: string, pos: { x: number; y: number }) => void
+  businessNodes: BusinessNode[]
+  addBusinessNode: (node: BusinessNode) => void
+  updateBusinessNode: (id: string, patch: Partial<BusinessNode>) => void
+  deleteBusinessNode: (id: string) => void
+
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
 
@@ -64,6 +76,9 @@ export const useAppStore = create<AppState>()(
       deleteSelfItem: (id) => set((s) => ({
         selfItems: s.selfItems.filter((x) => x.id !== id),
         mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+        issueMapPositions: Object.fromEntries(
+          Object.entries(s.issueMapPositions).filter(([k]) => k !== `self-${id}`)
+        ),
       })),
 
       issues: [],
@@ -74,6 +89,12 @@ export const useAppStore = create<AppState>()(
       deleteIssue: (id) => set((s) => ({
         issues: s.issues.filter((x) => x.id !== id),
         mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+        issueMapPositions: Object.fromEntries(
+          Object.entries(s.issueMapPositions).filter(([k]) => k !== `issue-${id}`)
+        ),
+        issueMapEdges: s.issueMapEdges.filter(
+          (e) => e.source !== `issue-${id}` && e.target !== `issue-${id}`
+        ),
       })),
 
       connections: [],
@@ -88,6 +109,9 @@ export const useAppStore = create<AppState>()(
       deletePlan: (id) => set((s) => ({
         plans: s.plans.filter((x) => x.id !== id),
         mapNodes: s.mapNodes.filter((n) => n.refId !== id),
+        issueMapPositions: Object.fromEntries(
+          Object.entries(s.issueMapPositions).filter(([k]) => k !== `plan-${id}`)
+        ),
       })),
 
       mapNodes: [],
@@ -95,6 +119,28 @@ export const useAppStore = create<AppState>()(
       setMapNodes: (nodes) => set({ mapNodes: nodes }),
       setMapEdges: (edges) => set({ mapEdges: edges }),
       addMapNode: (node) => set((s) => ({ mapNodes: [...s.mapNodes, node] })),
+
+      issueMapEdges: [],
+      addIssueMapEdge: (edge) => set((s) => ({ issueMapEdges: [...s.issueMapEdges, edge] })),
+      deleteIssueMapEdge: (id) => set((s) => ({ issueMapEdges: s.issueMapEdges.filter((e) => e.id !== id) })),
+      issueMapPositions: {},
+      updateIssueMapPosition: (id, pos) => set((s) => ({
+        issueMapPositions: { ...s.issueMapPositions, [id]: pos },
+      })),
+      businessNodes: [],
+      addBusinessNode: (node) => set((s) => ({ businessNodes: [...s.businessNodes, node] })),
+      updateBusinessNode: (id, patch) => set((s) => ({
+        businessNodes: s.businessNodes.map((n) => n.id === id ? { ...n, ...patch } : n),
+      })),
+      deleteBusinessNode: (id) => set((s) => ({
+        businessNodes: s.businessNodes.filter((n) => n.id !== id),
+        issueMapPositions: Object.fromEntries(
+          Object.entries(s.issueMapPositions).filter(([k]) => k !== `biz-${id}`)
+        ),
+        issueMapEdges: s.issueMapEdges.filter(
+          (e) => e.source !== `biz-${id}` && e.target !== `biz-${id}`
+        ),
+      })),
 
       viewMode: 'mindmap',
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -112,6 +158,7 @@ export const useAppStore = create<AppState>()(
       resetAll: () => set({
         selfItems: [], issues: [], connections: [], plans: [],
         mapNodes: [], mapEdges: [], aiMessages: [],
+        issueMapEdges: [], businessNodes: [], issueMapPositions: {},
       }),
     }),
     {
@@ -124,6 +171,9 @@ export const useAppStore = create<AppState>()(
         plans: state.plans,
         mapNodes: state.mapNodes,
         mapEdges: state.mapEdges,
+        issueMapEdges: state.issueMapEdges,
+        issueMapPositions: state.issueMapPositions,
+        businessNodes: state.businessNodes,
       }),
     }
   )

@@ -66,8 +66,25 @@ export interface MapEdge {
   label?: string
 }
 
-export type ViewMode = 'mindmap' | 'toc'
+export type ViewMode = 'mindmap' | 'toc' | 'issuemap'
 export type ActiveModule = 'self' | 'issues' | 'connect' | 'plan'
+
+// Issue Map
+export type IssueEdgeDirection = '+' | '-'
+
+export interface IssueMapEdge {
+  id: string
+  source: string
+  target: string
+  direction: IssueEdgeDirection
+  reason?: string
+}
+
+export interface BusinessNode {
+  id: string
+  label: string
+  description?: string
+}
 
 export interface AIMessage {
   role: 'user' | 'assistant'

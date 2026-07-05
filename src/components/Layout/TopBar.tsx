@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Network, GitBranch, RotateCcw } from 'lucide-react'
+import { Network, GitBranch, Map, RotateCcw } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 import { useShallow } from 'zustand/react/shallow'
 import type { ViewMode } from '../../types'
@@ -28,8 +28,9 @@ export default function TopBar() {
 
       <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
         {([
-          { id: 'mindmap' as ViewMode, label: 'マインドマップ', icon: <Network size={13} /> },
-          { id: 'toc'     as ViewMode, label: 'ToC',           icon: <GitBranch size={13} /> },
+          { id: 'mindmap'  as ViewMode, label: 'マインドマップ', icon: <Network size={13} /> },
+          { id: 'issuemap' as ViewMode, label: '課題マップ',    icon: <Map size={13} /> },
+          { id: 'toc'      as ViewMode, label: 'ToC',           icon: <GitBranch size={13} /> },
         ] as const).map((v) => (
           <button key={v.id} onClick={() => setViewMode(v.id)}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors ${

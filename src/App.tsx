@@ -10,6 +10,7 @@ import ConnectionAnalysis from './components/Modules/ConnectionAnalysis'
 import PlanningModule from './components/Modules/PlanningModule'
 import MindMapView from './components/Visualization/MindMapView'
 import ToCView from './components/Visualization/ToCView'
+import IssueMapView from './components/Visualization/IssueMapView'
 import AIFacilitator from './components/AI/AIFacilitator'
 
 const MODULE_PANELS = {
@@ -59,7 +60,7 @@ export default function App() {
           {MODULE_PANELS[activeModule]}
         </div>
         <div className="flex-1 overflow-hidden">
-          {viewMode === 'mindmap' ? <MindMapView /> : <ToCView />}
+          {viewMode === 'mindmap' ? <MindMapView /> : viewMode === 'issuemap' ? <IssueMapView /> : <ToCView />}
         </div>
         {aiPanelOpen && (
           <div className="w-72 flex-shrink-0 overflow-hidden">

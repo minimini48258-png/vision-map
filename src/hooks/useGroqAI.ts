@@ -54,5 +54,51 @@ export function useGroqAI() {
     return ask(system, `【取り組む課題】${issueTitle}\n【動機・強み】${selfContent}`)
   }
 
-  return { ask, generateQuestion, analyzeAlignment, suggestPlanSteps, loading }
+  const suggestCausalConnections = async (
+    allNodes: Array<{ id: string; label: string; nodeType: string }>,
+    newNodeId: string,
+  ): Promise<Array<{ sourceId: string; targetId: string; direction: '+' | '-'; reason: string }>> => {
+    if (allNodes.length < 2) return []
+
+    const nodeList = allNodes.map((n, i) => `${i + 1}. 「${n.label}」（${n.nodeType}）`).join('\n')
+    const newIdx = allNodes.findIndex((n) => n.id === newNodeId) + 1
+
+    const system = `あなたはシステム思考の専門家です。
+課題の地図（因果関係ループ図）の要素間の因果関係を分析します。
+
++ は「Aが大きくなると/強くなるとBも大きくなる」（同方向・強化）
+- は「Aが大きくなると/強くなるとBが小さくなる」（逆方向・抑制）
+
+出力は必ず以下の形式で、1行1提案、最大3つ：
+[番号A]→[番号B]:[+/-]:理由（20字以内）
+
+例：
+1→3:+:地域経済活性化が新電力需要を高める
+2→4:-:若者流出で担い手が減少する`
+
+    const userMsg = `要素リスト：\n${nodeList}\n\n今回追加された要素：${newIdx}番\nこの要素を含む因果関係を最大3つ提案してください。`
+
+    try {
+      const response = await ask(system, userMsg)
+      const suggestions: Array<{ sourceId: string; targetId: string; direction: '+' | '-'; reason: string }> = []
+
+      for (const line of response.split('\n')) {
+        const match = line.match(/(\d+)→(\d+):\s*([+\-])\s*:?\s*(.*)/)
+        if (match) {
+          const si = parseInt(match[1]) - 1
+          const ti = parseInt(match[2]) - 1
+          const direction = (match[3] === '+' ? '+' : '-') as '+' | '-'
+          const reason = match[4].replace(/^[（(【]/, '').replace(/[）)】]$/, '').trim()
+          if (si >= 0 && si < allNodes.length && ti >= 0 && ti < allNodes.length && si !== ti) {
+            suggestions.push({ sourceId: allNodes[si].id, targetId: allNodes[ti].id, direction, reason })
+          }
+        }
+      }
+      return suggestions
+    } catch {
+      return []
+    }
+  }
+
+  return { ask, generateQuestion, analyzeAlignment, suggestPlanSteps, suggestCausalConnections, loading }
 }
